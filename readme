@@ -1,0 +1,193 @@
+🌩️ Static Website Deployment for Alaghu Nachiamman Traders using AWS EC2, NGINX.SSL & S3
+
+🧠 Project Overview
+
+This project demonstrates how to deploy a secure, scalable, and cost-effective static website using Amazon Web Services (AWS).
+The website is created for Alaghu Nachiamman Traders, a coconut product trading company, and is hosted on an EC2 instance configured with NGINX to serve static content stored in an Amazon S3 bucket.
+It integrates HTTPS (SSL) for secure communication and follows real-world DevOps best practices.
+
+🧱 Architecture Diagram
+
+User Browser
+     ↓ (https/http)
+EC2 Instance (NGINX Reverse Proxy)
+     ↓ (config)
+Amazon S3 (Static Content)
+
+
+Workflow:
+
+Users visit the website using EC2 Public IP or domain.
+NGINX serves pages from EC2 or fetches static files directly from S3.
+HTTPS ensures secure access using SSL certificates.
+
+⚙️ AWS Services Used
+
+Service	Purpose
+Amazon EC2	Hosts NGINX web server (reverse proxy).
+Amazon S3	Stores static website content (HTML, CSS, JS, images).
+IAM Role	Grants EC2 permission to access S3 securely.
+NGINX	Serves static files and proxies requests to S3.
+Certbot / Let’s Encrypt	Provides free SSL certificates for HTTPS.
+AWS CLI	Used for S3 synchronization and automation.
+
+🪣 S3 Configuration
+
+Create an S3 bucket:alaghuwebsite
+Region: us-east-1
+Disable “Block all public access”
+Add public-read policy:
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::alaghuwebsite/*"
+    }
+  ]
+}
+
+
+
+
+💻 EC2 Configuration
+
+Launch EC2 instance:
+AMI: Amazon Linux 2
+Type: t2.micro (Free Tier)
+Security Group:
+Port 22 → SSH (Your IP)
+Port 80 → HTTP (0.0.0.0/0)
+Port 443 → HTTPS (0.0.0.0/0)
+Install NGINX:
+sudo yum update -y
+sudo yum install nginx -y
+sudo systemctl start nginx
+sudo systemctl enable nginx
+
+
+Verify in browser:
+
+http://<EC2-Public-IP>
+
+
+You should see the default NGINX welcome page.
+
+🔁 NGINX Reverse Proxy Configuration
+
+File: /etc/nginx/conf.d/default.conf
+
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ @s3;
+    }
+
+    location @s3 {
+        resolver 1.1.1.1;
+        proxy_pass https://alaghuwebsite.s3.us-east-1.amazonaws.com$request_uri;
+        proxy_set_header Host alaghuwebsite.s3.us-east-1.amazonaws.com;
+        proxy_hide_header x-amz-id-2;
+        proxy_hide_header x-amz-request-id;
+    }
+}
+
+Restart NGINX:
+
+sudo nginx -t
+sudo systemctl restart nginx
+
+🔐 Enabling HTTPS (SSL)
+✅ Option 1 – Let’s Encrypt (Recommended)
+For domain name (e.g. alaghuwebsite.com):
+
+sudo yum install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d alaghuwebsite.com -d www.alaghuwebsite.com
+
+
+Automatically:
+Generates SSL certificate
+Configures NGINX
+Sets up auto-renewal (every 90 days)
+
+⚙️ Option 2 – Self-Signed SSL (For Testing with IP)
+sudo mkdir /etc/nginx/ssl
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+-keyout /etc/nginx/ssl/self.key -out /etc/nginx/ssl/self.crt
+
+
+Add this to /etc/nginx/conf.d/default.conf:
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate     /etc/nginx/ssl/self.crt;
+    ssl_certificate_key /etc/nginx/ssl/self.key;
+
+    root /usr/share/nginx/html;
+    index index.html;
+}
+
+
+Restart:
+sudo systemctl restart nginx
+
+Visit:
+https://<EC2-Public-IP>
+
+🔄 Automate S3 Sync
+To auto-update EC2 content from S3 every 10 minutes:
+crontab -e
+Add:
+*/10 * * * * sudo aws s3 sync s3://alaghuwebsite /usr/share/nginx/html/ && sudo systemctl reload nginx
+
+✅ Final Output
+
+Website URLs:
+http://<EC2-Public-IP>
+https://<EC2-Public-IP>
+
+
+Features:
+Static website hosted using AWS EC2 + S3
+Reverse proxy integration with NGINX
+Secure HTTPS access
+Auto content sync from S3
+Scalable, reliable, and cloud-based
+
+🧠 Key Learnings
+
+Hosting static websites with EC2 and S3
+Reverse proxy setup with NGINX
+SSL/HTTPS implementation with Certbot
+IAM-based security and automation
+
+Cloud deployment and maintenance best practices
+
+🧰 Tech Stack
+Category	Tools
+Cloud Platform:	AWS
+Services:	EC2, S3, IAM
+Web Server:	NGINX
+Security:	SSL (Let’s Encrypt / Self-signed)
+Languages:	HTML, CSS, JavaScript
+Automation:	AWS CLI, Cron Jobs
+OS:	Amazon Linux 2
+
+👨‍💻 Author
+Project: Alaghu Nachiamman Traders – AWS Static Website Deployment
+Developed by: [Your Name]
+📧 Email: [youremail@example.com
+]
+🔗 LinkedIn: https://linkedin.com/in/yourprofile
+
+🏷️ Tags
+AWS EC2 S3 NGINX SSL HTTPS Cloud Computing DevOps Static Website Hosting
